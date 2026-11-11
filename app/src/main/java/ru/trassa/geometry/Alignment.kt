@@ -28,6 +28,15 @@ data class RigidTransformY(val yaw: Float, val translation: Vec3) {
         return Vec3(v.x * c + v.z * s, v.y, -v.x * s + v.z * c)
     }
 
+    /**
+     * Обратное преобразование: из текущей сессии обратно в систему комнаты.
+     * q = R·p + t  ⇒  p = R⁻¹·(q − t) = R(−yaw)·q − R(−yaw)·t
+     */
+    fun inverse(): RigidTransformY {
+        val back = RigidTransformY(-yaw, Vec3.ZERO)
+        return RigidTransformY(-yaw, Vec3.ZERO - back.rotate(translation))
+    }
+
     companion object {
         val IDENTITY = RigidTransformY(0f, Vec3.ZERO)
     }

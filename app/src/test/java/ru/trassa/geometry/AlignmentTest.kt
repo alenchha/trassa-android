@@ -63,6 +63,13 @@ class AlignmentTest {
         assertFalse(success(Alignment.solve(refs, moved)).isReliable)
     }
 
+    @Test fun inverseReturnsToRoomFrame() {
+        val t = RigidTransformY(1.3f, Vec3(0.5f, -0.2f, 2f))
+        val p = Vec3(0.4f, 1.1f, -0.7f)
+        assertEquals(0f, t.inverse().apply(t.apply(p)).distanceTo(p), eps)
+        assertEquals(0f, t.apply(t.inverse().apply(p)).distanceTo(p), eps)
+    }
+
     @Test fun needsAtLeastTwoPoints() {
         assertEquals(AlignmentResult.NotEnoughPoints, Alignment.solve(refs.take(1), refs.take(1)))
     }
