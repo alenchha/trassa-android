@@ -108,7 +108,7 @@ fun OnboardingScreen(onFinish: () -> Unit) {
                 Text("Пропустить", style = TrassaType.Footnote, color = TrassaColors.TextSecondary,
                     modifier = Modifier.clip(RoundedCornerShape(8.dp)).combinedClickable(onClick = onFinish).padding(12.dp))
             }
-            HorizontalPager(pager, Modifier.weight(1f)) { i ->
+            HorizontalPager(pager, Modifier.weight(1f), verticalAlignment = Alignment.Top) { i ->
                 val p = pages[i]
                 Column(Modifier.verticalScroll(rememberScrollState())) {
                     OnboardingIllustration(p.photo, p.tag, i, Modifier.padding(top = 17.dp).fillMaxWidth().height(345.dp))

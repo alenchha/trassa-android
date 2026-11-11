@@ -4,6 +4,13 @@
 
 Android-версия приложения [«Трасса» для iPhone](https://github.com/alenchha/trassa-ar). На черновом этапе ремонта вы отмечаете в AR, где на стене идут трубы и кабели. Через месяцы, уже после отделки, приложение показывает их на тех же местах и подсказывает, где сверлить нельзя.
 
+<p>
+  <img src="docs/screens/onboarding.png" width="190">
+  <img src="docs/screens/objects.png" width="190">
+  <img src="docs/screens/new-object.png" width="190">
+  <img src="docs/screens/record.png" width="190">
+</p>
+
 ## Проблема
 
 После чистовой отделки никто не помнит, где проходят трассы, и при сверлении под мебель их повреждают. Фото штроб в галерее не помогают: их нельзя точно наложить на готовую стену. Подробнее о проблеме и результатах CustDev-интервью с прорабами - в [README iOS-версии](https://github.com/alenchha/trassa-ar#проблема).
