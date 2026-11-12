@@ -32,6 +32,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
@@ -226,12 +228,13 @@ fun RecordScreen(nav: NavHostController, projectId: Long, roomId: Long?) {
         Box(Modifier.fillMaxSize().background(TrassaColors.CameraDim))
 
         // Прицел строго в центре - туда направлен hit test
-        Box(Modifier.align(Alignment.Center)) {
-            Reticle(if (ar.hit != null) TrassaColors.Accent else TrassaColors.TextMuted)
-            if (phase == RecordPhase.RECORD && current.points.isNotEmpty()) {
-                Text("${Formatters.meters(current.length)} · ${Formatters.points(current.points.size)}", style = TrassaType.CaptionBold, color = current.type.color,
-                    modifier = Modifier.offset(44.dp, (-24).dp).clip(RoundedCornerShape(6.dp)).background(TrassaColors.Background).padding(horizontal = 10.dp, vertical = 8.dp))
-            }
+        Reticle(if (ar.hit != null) TrassaColors.Accent else TrassaColors.TextMuted, Modifier.align(Alignment.Center))
+        if (phase == RecordPhase.RECORD && current.points.isNotEmpty()) {
+            // Подпись справа сверху от прицела. Слой нулевого размера в центре экрана:
+            // подпись не участвует в раскладке и не может сдвинуть прицел с точки hit test
+            Text("${Formatters.meters(current.length)} · ${Formatters.points(current.points.size)}", style = TrassaType.CaptionBold, color = current.type.color,
+                modifier = Modifier.align(Alignment.Center).besideCenter(36.dp, (-48).dp)
+                    .clip(RoundedCornerShape(6.dp)).background(TrassaColors.Background).padding(horizontal = 10.dp, vertical = 8.dp))
         }
 
         Column(Modifier.fillMaxSize()) {
@@ -374,4 +377,13 @@ fun InfoDialog(text: String, onDismiss: () -> Unit) {
                 modifier = Modifier.clip(RoundedCornerShape(8.dp)).combinedClickableCompat(onDismiss).padding(12.dp))
         },
     )
+}
+
+/**
+ * Ставит элемент со сдвигом (dx, dy) от точки привязки, не занимая места в раскладке:
+ * размер слоя 0×0, поэтому соседние элементы (прицел) остаются строго по центру.
+ */
+private fun Modifier.besideCenter(dx: Dp, dy: Dp) = layout { measurable, constraints ->
+    val p = measurable.measure(constraints.copy(minWidth = 0, minHeight = 0))
+    layout(0, 0) { p.place(dx.roundToPx(), dy.roundToPx()) }
 }
