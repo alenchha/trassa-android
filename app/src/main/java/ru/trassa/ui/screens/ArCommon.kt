@@ -2,6 +2,17 @@ package ru.trassa.ui.screens
 
 import android.graphics.Bitmap
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.window.Dialog
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -83,16 +94,63 @@ const val REFERENCE_TIPS = "Выберите то, что не изменитс�
 @Composable
 fun AlignPanel(references: List<ReferencePointEntity>, index: Int, canMark: Boolean, onMark: () -> Unit, onCancel: () -> Unit) {
     val ref = references.getOrNull(index)
+    var zoomed by remember { mutableStateOf(false) }
     Column(Modifier.fillMaxWidth().background(TrassaColors.Background).padding(horizontal = TrassaDimens.ScreenPadding).padding(top = 20.dp, bottom = 8.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-            PhotoBox(ref?.photoPath, Modifier.size(84.dp).clip(RoundedCornerShape(TrassaDimens.SmallRadius)), R.drawable.wall_finished)
+            ReferencePhoto(ref?.photoPath, Modifier.size(112.dp).clip(RoundedCornerShape(TrassaDimens.SmallRadius)).clickable { zoomed = true })
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Ориентир ${index + 1} из ${references.size}", style = TrassaType.Title2, color = TrassaColors.TextPrimary)
-                Text("Наведите прицел на то же место, что на фото, и нажмите «Это здесь».", style = TrassaType.FootnoteRegular, color = TrassaColors.TextSecondary)
+                Text("Красный кружок на фото - точное место ориентира. Наведите прицел туда же и нажмите «Это здесь». Нажмите на фото, чтобы увеличить.", style = TrassaType.FootnoteRegular, color = TrassaColors.TextSecondary)
             }
         }
         PrimaryButton("Это здесь", onMark, Modifier.padding(top = 20.dp), enabled = canMark)
         SecondaryButton("Отменить", onCancel, Modifier.padding(top = 8.dp))
+    }
+    if (zoomed) {
+        // Фото ориентира на весь экран: так проще найти то же место на стене
+        Dialog(onDismissRequest = { zoomed = false }) {
+            Column(
+                Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(TrassaColors.Background).clickable { zoomed = false }.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                ReferencePhoto(ref?.photoPath, Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(TrassaDimens.SmallRadius)))
+                Text("Ориентир ${index + 1} из ${references.size}", style = TrassaType.Title2, color = TrassaColors.TextPrimary)
+                Text("Поставьте прицел в центр красного кружка. Нажмите, чтобы закрыть.", style = TrassaType.FootnoteRegular, color = TrassaColors.TextSecondary)
+            }
+        }
+    }
+}
+
+/** Фото ориентира с отметкой места прицела */
+@Composable
+fun ReferencePhoto(path: String?, modifier: Modifier) {
+    Box(modifier) {
+        PhotoBox(path, Modifier.fillMaxSize(), R.drawable.wall_finished)
+        if (path != null) ReferenceMark(Modifier.fillMaxSize())
+    }
+}
+
+/**
+ * Отметка ориентира в центре фото. Снимок - квадрат, вырезанный из центра экрана,
+ * а прицел всегда в центре экрана, поэтому место ориентира - ровно центр фото.
+ * Рисуется при показе, а не в файле - так отметка есть и на фото, снятых раньше.
+ */
+@Composable
+fun ReferenceMark(modifier: Modifier) {
+    Canvas(modifier) {
+        val c = center
+        val r = size.minDimension * 0.07f
+        val w = maxOf(size.minDimension * 0.012f, 1.5f)
+        // Перекрестие с разрывом в центре, чтобы не закрывать саму точку
+        val gap = r * 1.6f
+        val len = r * 3.2f
+        listOf(Offset(1f, 0f), Offset(-1f, 0f), Offset(0f, 1f), Offset(0f, -1f)).forEach { d ->
+            drawLine(Color.White, c + d * gap, c + d * len, w * 2.2f)
+            drawLine(TrassaColors.Danger, c + d * gap, c + d * len, w)
+        }
+        drawCircle(Color.White, r, c, style = Stroke(w * 2.2f))
+        drawCircle(TrassaColors.Danger, r, c, style = Stroke(w))
+        drawCircle(TrassaColors.Danger, maxOf(w * 1.2f, 2f), c)
     }
 }
 
@@ -103,15 +161,17 @@ fun ReferenceThumbs(photos: List<Bitmap?>, total: Int) {
         repeat(total) { i ->
             val bmp = photos.getOrNull(i)
             Box(Modifier.size(56.dp).clip(RoundedCornerShape(8.dp)).background(TrassaColors.Surface), contentAlignment = Alignment.Center) {
-                if (bmp != null) Image(bmp.asImageBitmap(), null, Modifier.size(56.dp), contentScale = ContentScale.Crop)
-                else Text("${i + 1}", style = TrassaType.Headline, color = TrassaColors.TextMuted)
+                if (bmp != null) Box(Modifier.size(56.dp)) {
+                    Image(bmp.asImageBitmap(), null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                    ReferenceMark(Modifier.fillMaxSize())
+                } else Text("${i + 1}", style = TrassaType.Headline, color = TrassaColors.TextMuted)
             }
         }
     }
 }
 
 /** Вырезает центр снимка (вокруг прицела) - фото ориентира */
-fun Bitmap.centerCrop(fraction: Float = 0.45f, maxSize: Int = 480): Bitmap {
+fun Bitmap.centerCrop(fraction: Float = 0.75f, maxSize: Int = 720): Bitmap {
     val side = (minOf(width, height) * fraction).toInt().coerceAtLeast(1)
     val crop = Bitmap.createBitmap(this, (width - side) / 2, (height - side) / 2, side, side)
     return if (side > maxSize) Bitmap.createScaledBitmap(crop, maxSize, maxSize, true) else crop
